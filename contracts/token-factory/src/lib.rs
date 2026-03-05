@@ -12,12 +12,15 @@ mod timelock;
 mod pagination;
 mod mint;
 mod treasury;
+mod vesting;
+mod differential_engine;
+#[cfg(test)]
+mod comprehensive_differential_tests;
+#[cfg(test)]
+mod differential_proptest;
 
-use soroban_sdk::{contract, contractimpl, Address, Env};
-use types::{Error, FactoryState, TokenInfo, TokenStats};
-
-use soroban_sdk::{contract, contractimpl, symbol_short, Address, Env, String};
-use types::{ContractMetadata, Error, FactoryState, TokenInfo};
+use soroban_sdk::{contract, contractimpl, symbol_short, Address, Env, String, Vec};
+use types::{ContractMetadata, Error, FactoryState, TokenInfo, TokenStats, TokenCreationParams};
 
 // Contract metadata constants
 const CONTRACT_NAME: &str = "Nova Launch Token Factory";
@@ -25,8 +28,6 @@ const CONTRACT_DESCRIPTION: &str = "No-code token deployment on Stellar";
 const CONTRACT_AUTHOR: &str = "Nova Launch Team";
 const CONTRACT_LICENSE: &str = "MIT";
 const CONTRACT_VERSION: &str = "1.0.0";
-use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
-use types::{Error, FactoryState, TokenInfo, TokenCreationParams};
 
 #[contract]
 pub struct TokenFactory;
@@ -587,16 +588,15 @@ impl TokenFactory {
         // Emit optimized event
         events::emit_fees_updated(&env, new_base_fee, new_metadata_fee);
 
+        Ok(())
+    }
+
     /// Get token info by index
    pub fn get_token_info(env: Env, index: u32) -> Result<TokenInfo, Error> {
     let mut info = storage::get_token_info(&env, index).ok_or(Error::TokenNotFound)?;
     info.is_paused = storage::is_token_paused(&env, index);   // ADD
     Ok(info)
 }
-    /// Create a new token (Simulated for registry)
-    pub fn create_token(
-        Ok(())
-    }
 
     /// Batch update admin operations (Phase 2 optimization)
     ///
@@ -762,6 +762,13 @@ impl TokenFactory {
 
     if info.metadata_uri.is_some() {
         return Err(Error::MetadataAlreadySet);
+    }
+    
+    info.metadata_uri = Some(new_metadata_uri);
+    storage::set_token_info(&env, index, &info);
+    Ok(())
+   }
+
     /// Get token information by contract address
     ///
     /// Retrieves complete information about a token using its
@@ -1731,6 +1738,12 @@ mod supply_conservation_test;
 #[cfg(test)]
 mod fuzz_create_token_simple;
 
+#[cfg(test)]
+mod differential_test;
+
+#[cfg(test)]
+mod vesting_differential_proptest;
+
 // Temporarily disabled due to compilation issues
 // #[cfg(test)]
 // mod fuzz_update_fees;
@@ -1768,6 +1781,9 @@ mod gas_benchmark_comprehensive;
 
 #[cfg(test)]
 mod timelock_test;
+
+#[cfg(test)]
+mod stateful_model_test;
 
 #[cfg(test)]
 mod pagination_integration_test;
